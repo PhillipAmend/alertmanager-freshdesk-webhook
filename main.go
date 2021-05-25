@@ -65,9 +65,16 @@ type freshdeskTicketField struct {
 const defaultListenAddress = "127.0.0.1:9095"
 
 var (
-	whURL         = flag.String("webhook.url", os.Getenv("FRESHDESK_API"), "Freshdesk API URL.")
-	listenAddress = flag.String("listen.address", os.Getenv("LISTEN_ADDRESS"), "Address:Port to listen on.")
+	whURL          = flag.String("webhook.url", os.Getenv("FRESHDESK_API"), "Freshdesk API URL.")
+	freshdeskToken = flag.String("freshdesk.token", os.Getenv("FRESHDESK_TOKEN"), "Freshdesk API Token")
+	listenAddress  = flag.String("listen.address", os.Getenv("LISTEN_ADDRESS"), "Address:Port to listen on.")
 )
+
+func checkFdToken(freshdeskToken string) {
+	if freshdeskToken == "" {
+		log.Fatalf("Environment variable 'FRESHDESK_TOKEN' or CLI parameter 'freshdesk.token' not found.")
+	}
+}
 
 func checkWhURL(whURL string) {
 	if whURL == "" {
@@ -86,6 +93,7 @@ func checkWhURL(whURL string) {
 
 func sendWebhook(amo *alertManOut) {
 	groupedAlerts := make(map[string][]alertManAlert)
+	client := &http.Client{}
 
 	for _, alert := range amo.Alerts {
 		groupedAlerts[alert.Status] = append(groupedAlerts[alert.Status], alert)
@@ -118,40 +126,29 @@ func sendWebhook(amo *alertManOut) {
 		DO.Embeds = []freshdeskTicket{RichEmbed}
 
 		DOD, _ := json.Marshal(DO)
-		println(http.Response.Status)
-		http.Post(*whURL, "application/json", bytes.NewReader(DOD))
+
+		// Create request
+		req, _ := http.NewRequest("POST", *whURL, bytes.NewReader(DOD))
+		req.Header.Set("Content-Type", "application/json")
+		req.SetBasicAuth(*freshdeskToken, "X")
+		// Fetch Request
+		resp, _ := client.Do(req)
+		defer resp.Body.Close()
+
+		// Read Response Body
+		respBody, _ := ioutil.ReadAll(resp.Body)
+
+		fmt.Println("response Body : ", string(respBody))
+
+		fmt.Println(string(respBody), nil)
+		//http.Post(*whURL, "application/json", bytes.NewReader(DOD))
 	}
-}
-
-func sendRawPromAlertWarn() {
-	badString := `This program is suppose to be fed by alertmanager.` + "\n" +
-		`It is not a replacement for alertmanager, it is a ` + "\n" +
-		`webhook target for it. Please read the README.md  ` + "\n" +
-		`for guidance on how to configure it for alertmanager` + "\n" +
-		`or https://prometheus.io/docs/alerting/latest/configuration/#webhook_config`
-
-	log.Print(`/!\ -- You have misconfigured this software -- /!\`)
-	log.Print(`--- --                                      -- ---`)
-	log.Print(badString)
-
-	DO := freshdeskOut{
-		Content: "",
-		Embeds: []freshdeskTicket{
-			{
-				Subject:     "You have misconfigured this software",
-				Description: badString,
-				Fields:      []freshdeskTicketField{},
-			},
-		},
-	}
-
-	DOD, _ := json.Marshal(DO)
-	http.Post(*whURL, "application/json", bytes.NewReader(DOD))
 }
 
 func main() {
 	flag.Parse()
 	checkWhURL(*whURL)
+	checkFdToken(*freshdeskToken)
 
 	if *listenAddress == "" {
 		*listenAddress = defaultListenAddress
@@ -169,10 +166,6 @@ func main() {
 		amo := alertManOut{}
 		err = json.Unmarshal(b, &amo)
 		if err != nil {
-			if isRawPromAlert(b) {
-				sendRawPromAlertWarn()
-				return
-			}
 
 			if len(b) > 1024 {
 				log.Printf("Failed to unpack inbound alert request - %s...", string(b[:1023]))
@@ -183,7 +176,6 @@ func main() {
 
 			return
 		}
-		println("debug")
 		sendWebhook(&amo)
 	}))
 }

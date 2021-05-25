@@ -1,3 +1,3 @@
-module alertmanager-freshdesk-webhook
+module kubermatic/altermanager-freshdesk-json
 
 go 1.16
