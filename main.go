@@ -32,6 +32,7 @@ type alertManOut struct {
 		Summary string `json:"summary"`
 	} `json:"commonAnnotations"`
 	CommonLabels struct {
+		Severity  string `json:"severity"`
 		Alertname string `json:"alertname"`
 	} `json:"commonLabels"`
 	ExternalURL string `json:"externalURL"`
@@ -45,12 +46,23 @@ type alertManOut struct {
 }
 
 type freshdeskOut struct {
-	Content string            `json:"content"`
-	Embeds  []freshdeskTicket `json:"embeds"`
+	Subject     string `json:"subject"`
+	Description string `json:"description"`
+	Status      int    `json:"status"`
+	Priority    int    `json:"priority"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	Category    string `json:"category"`
 }
+
+//type freshdeskOut struct {
+//	Content string            `json:"content"`
+//	Embeds  []freshdeskTicket `json:"embeds"`
+//}
 
 type freshdeskTicket struct {
 	Subject     string                 `json:"subject"`
+	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	Status      int                    `json:"status"`
 	Priority    int                    `json:"priority"`
@@ -58,8 +70,7 @@ type freshdeskTicket struct {
 }
 
 type freshdeskTicketField struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
+	Name string `json:"name"`
 }
 
 const defaultListenAddress = "127.0.0.1:9095"
@@ -92,23 +103,57 @@ func checkWhURL(whURL string) {
 }
 
 func sendWebhook(amo *alertManOut) {
+	const (
+		info     = iota + 1
+		warning  = iota + 1
+		error    = iota + 1
+		critical = iota + 1
+	)
+	const (
+		firing = iota + 2
+		_
+		_
+		_
+		resolved = iota + 1
+	)
+
+	fmt.Println(info, warning, error, critical)
+	fmt.Println(amo.CommonLabels.Severity)
 	groupedAlerts := make(map[string][]alertManAlert)
 	client := &http.Client{}
-
 	for _, alert := range amo.Alerts {
 		groupedAlerts[alert.Status] = append(groupedAlerts[alert.Status], alert)
+
 	}
 
 	for status, alerts := range groupedAlerts {
-		DO := freshdeskOut{}
+		DO := freshdeskOut{
+			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
+			Description: amo.CommonAnnotations.Summary,
+			Name:        amo.CommonLabels.Alertname,
+			Email:       "phillip@kubermatic.com",
+			Category:    "Product",
+		}
+
 		RichEmbed := freshdeskTicket{
 			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
 			Description: amo.CommonAnnotations.Summary,
-			Fields:      []freshdeskTicketField{},
+		}
+
+		if amo.CommonLabels.Severity == "warning" {
+			DO.Priority = warning
+		} else if amo.CommonLabels.Severity == "critical" {
+			DO.Priority = critical
+		}
+		fmt.Println(DO.Priority)
+		if amo.Status == "firing" {
+			DO.Status = firing
+		} else if amo.Status == "resolved" {
+			DO.Status = resolved
 		}
 
 		if amo.CommonAnnotations.Summary != "" {
-			DO.Content = fmt.Sprintf(" === %s === \n", amo.CommonAnnotations.Summary)
+			DO.Subject = fmt.Sprintf(" === %s === \n", amo.CommonAnnotations.Summary)
 		}
 
 		for _, alert := range alerts {
@@ -118,12 +163,11 @@ func sendWebhook(amo *alertManOut) {
 			}
 
 			RichEmbed.Fields = append(RichEmbed.Fields, freshdeskTicketField{
-				Name:  fmt.Sprintf("[%s]: %s on %s", strings.ToUpper(status), alert.Labels["alertname"], realname),
-				Value: alert.Annotations.Description,
+				Name: fmt.Sprintf("[%s]: %s on %s", strings.ToUpper(status), alert.Labels["alertname"], realname),
 			})
 		}
 
-		DO.Embeds = []freshdeskTicket{RichEmbed}
+		//DO.Embeds = []freshdeskTicket{RichEmbed}
 
 		DOD, _ := json.Marshal(DO)
 
@@ -140,7 +184,6 @@ func sendWebhook(amo *alertManOut) {
 
 		fmt.Println("response Body : ", string(respBody))
 
-		fmt.Println(string(respBody), nil)
 		//http.Post(*whURL, "application/json", bytes.NewReader(DOD))
 	}
 }
