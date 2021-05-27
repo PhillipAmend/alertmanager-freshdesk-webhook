@@ -132,7 +132,6 @@ func sendWebhook(amo *alertManOut) {
 			Description: amo.CommonAnnotations.Summary,
 			Name:        amo.CommonLabels.Alertname,
 			Email:       "phillip@kubermatic.com",
-			Category:    "Product",
 		}
 
 		RichEmbed := freshdeskTicket{
