@@ -54,11 +54,6 @@ type freshdeskOut struct {
 	Email       string `json:"email"`
 }
 
-//type freshdeskOut struct {
-//	Content string            `json:"content"`
-//	Embeds  []freshdeskTicket `json:"embeds"`
-//}
-
 type freshdeskTicket struct {
 	Subject     string                 `json:"subject"`
 	Name        string                 `json:"name"`
@@ -97,11 +92,13 @@ func checkWhURL(whURL string) {
 
 	re := regexp.MustCompile(`^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/\n]+)`)
 	if ok := re.Match([]byte(whURL)); !ok {
-		log.Printf("The Freshdesk API URL doesn't seem to be a valid URL(regex).")
+		log.Printf("The Freshdesk API URL doesn't seem to be a valid URL.")
 	}
 }
 
 func sendWebhook(amo *alertManOut) {
+
+	// use enum iota to match incoming strings to int
 	const (
 		info     = iota + 1
 		warning  = iota + 1
@@ -116,8 +113,6 @@ func sendWebhook(amo *alertManOut) {
 		resolved = iota + 1
 	)
 
-	fmt.Println(info, warning, error, critical)
-	fmt.Println(amo.CommonLabels.Severity)
 	groupedAlerts := make(map[string][]alertManAlert)
 	client := &http.Client{}
 	for _, alert := range amo.Alerts {
@@ -165,8 +160,6 @@ func sendWebhook(amo *alertManOut) {
 			})
 		}
 
-		//DO.Embeds = []freshdeskTicket{RichEmbed}
-
 		DOD, _ := json.Marshal(DO)
 
 		// Create request
@@ -176,13 +169,10 @@ func sendWebhook(amo *alertManOut) {
 		// Fetch Request
 		resp, _ := client.Do(req)
 		defer resp.Body.Close()
-
 		// Read Response Body
 		respBody, _ := ioutil.ReadAll(resp.Body)
 
 		fmt.Println("response Body : ", string(respBody))
-
-		//http.Post(*whURL, "application/json", bytes.NewReader(DOD))
 	}
 }
 
