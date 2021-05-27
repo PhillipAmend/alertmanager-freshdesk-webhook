@@ -52,7 +52,6 @@ type freshdeskOut struct {
 	Priority    int    `json:"priority"`
 	Name        string `json:"name"`
 	Email       string `json:"email"`
-	Category    string `json:"category"`
 }
 
 //type freshdeskOut struct {
