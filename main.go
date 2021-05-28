@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type alertManAlert struct {
@@ -67,6 +68,41 @@ type freshdeskTicketField struct {
 	Name string `json:"name"`
 }
 
+type freshServiceTicket struct {
+	Tickets []struct {
+		Subject         string        `json:"subject"`
+		GroupID         interface{}   `json:"group_id"`
+		DepartmentID    interface{}   `json:"department_id"`
+		Category        string        `json:"category"`
+		SubCategory     interface{}   `json:"sub_category"`
+		ItemCategory    interface{}   `json:"item_category"`
+		RequesterID     int64         `json:"requester_id"`
+		ResponderID     interface{}   `json:"responder_id"`
+		DueBy           time.Time     `json:"due_by"`
+		FrEscalated     bool          `json:"fr_escalated"`
+		Deleted         bool          `json:"deleted"`
+		Spam            bool          `json:"spam"`
+		EmailConfigID   interface{}   `json:"email_config_id"`
+		FwdEmails       []interface{} `json:"fwd_emails"`
+		ReplyCcEmails   []interface{} `json:"reply_cc_emails"`
+		CcEmails        []interface{} `json:"cc_emails"`
+		IsEscalated     bool          `json:"is_escalated"`
+		FrDueBy         time.Time     `json:"fr_due_by"`
+		ID              int           `json:"id"`
+		Priority        int           `json:"priority"`
+		Status          int           `json:"status"`
+		Source          int           `json:"source"`
+		CreatedAt       time.Time     `json:"created_at"`
+		UpdatedAt       time.Time     `json:"updated_at"`
+		ToEmails        interface{}   `json:"to_emails"`
+		Type            string        `json:"type"`
+		Description     string        `json:"description"`
+		DescriptionText string        `json:"description_text"`
+		CustomFields    struct {
+		} `json:"custom_fields"`
+	} `json:"tickets"`
+}
+
 const defaultListenAddress = "127.0.0.1:9095"
 
 var (
@@ -94,6 +130,35 @@ func checkWhURL(whURL string) {
 	if ok := re.Match([]byte(whURL)); !ok {
 		log.Printf("The Freshdesk API URL doesn't seem to be a valid URL.")
 	}
+}
+
+func getTickets() {
+	client := &http.Client{}
+	url := *whURL
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(*freshdeskToken, "X")
+	res, getErr := client.Do(req)
+	if getErr != nil {
+		log.Fatal(getErr)
+	}
+	if res.Body != nil {
+		defer res.Body.Close()
+	}
+	body, readErr := ioutil.ReadAll(res.Body)
+	if readErr != nil {
+		log.Fatal(readErr)
+	}
+	tickets := freshServiceTicket{}
+	jsonErr := json.Unmarshal(body, &tickets)
+	if jsonErr != nil {
+		log.Fatal(jsonErr)
+	}
+
 }
 
 func sendWebhook(amo *alertManOut) {
@@ -138,7 +203,6 @@ func sendWebhook(amo *alertManOut) {
 		} else if amo.CommonLabels.Severity == "critical" {
 			DO.Priority = critical
 		}
-		fmt.Println(DO.Priority)
 		if amo.Status == "firing" {
 			DO.Status = firing
 		} else if amo.Status == "resolved" {
@@ -180,6 +244,7 @@ func main() {
 	flag.Parse()
 	checkWhURL(*whURL)
 	checkFdToken(*freshdeskToken)
+	getTickets()
 
 	if *listenAddress == "" {
 		*listenAddress = defaultListenAddress
