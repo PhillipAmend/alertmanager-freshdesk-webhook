@@ -25,6 +25,7 @@ type alertManAlert struct {
 	Labels       map[string]string `json:"labels"`
 	StartsAt     string            `json:"startsAt"`
 	Status       string            `json:"status"`
+	Fingerprint  string            `json:"fingerprint"`
 }
 
 type alertManOut struct {
@@ -47,12 +48,15 @@ type alertManOut struct {
 }
 
 type freshdeskOut struct {
-	Subject     string `json:"subject"`
-	Description string `json:"description"`
-	Status      int    `json:"status"`
-	Priority    int    `json:"priority"`
-	Name        string `json:"name"`
-	Email       string `json:"email"`
+	Subject       string `json:"subject"`
+	Description   string `json:"description"`
+	Status        int    `json:"status"`
+	Priority      int    `json:"priority"`
+	Name          string `json:"name"`
+	Email         string `json:"email"`
+	Custom_Fields struct {
+		Fingerprint string `json:"fingerprint"`
+	} `json:"custom_fields"`
 }
 
 type freshdeskTicket struct {
@@ -186,6 +190,7 @@ func sendWebhook(amo *alertManOut) {
 	}
 
 	for status, alerts := range groupedAlerts {
+
 		DO := freshdeskOut{
 			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
 			Description: amo.CommonAnnotations.Summary,
@@ -197,7 +202,6 @@ func sendWebhook(amo *alertManOut) {
 			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
 			Description: amo.CommonAnnotations.Summary,
 		}
-
 		if amo.CommonLabels.Severity == "warning" {
 			DO.Priority = warning
 		} else if amo.CommonLabels.Severity == "critical" {
@@ -211,6 +215,13 @@ func sendWebhook(amo *alertManOut) {
 
 		if amo.CommonAnnotations.Summary != "" {
 			DO.Subject = fmt.Sprintf(" === %s === \n", amo.CommonAnnotations.Summary)
+		}
+
+		for _, alert := range alerts {
+			fingerprint := alert.Fingerprint
+
+			DO.Custom_Fields.Fingerprint = fingerprint
+			fmt.Println(fingerprint)
 		}
 
 		for _, alert := range alerts {
@@ -244,7 +255,7 @@ func main() {
 	flag.Parse()
 	checkWhURL(*whURL)
 	checkFdToken(*freshdeskToken)
-	getTickets()
+	getTickets(&freshServiceTicket)
 
 	if *listenAddress == "" {
 		*listenAddress = defaultListenAddress
