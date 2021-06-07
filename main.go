@@ -221,7 +221,6 @@ func sendWebhook(amo *alertManOut) {
 			fingerprint := alert.Fingerprint
 
 			DO.Custom_Fields.Fingerprint = fingerprint
-			fmt.Println(fingerprint)
 		}
 
 		for _, alert := range alerts {
