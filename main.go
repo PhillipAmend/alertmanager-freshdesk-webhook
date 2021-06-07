@@ -255,7 +255,7 @@ func main() {
 	flag.Parse()
 	checkWhURL(*whURL)
 	checkFdToken(*freshdeskToken)
-	getTickets(&freshServiceTicket)
+	getTickets()
 
 	if *listenAddress == "" {
 		*listenAddress = defaultListenAddress
