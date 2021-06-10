@@ -103,6 +103,7 @@ type freshServiceTicket struct {
 		Description     string        `json:"description"`
 		DescriptionText string        `json:"description_text"`
 		CustomFields    struct {
+			Fingerprint string `json:"fingerprint"`
 		} `json:"custom_fields"`
 	} `json:"tickets"`
 }
@@ -113,6 +114,7 @@ var (
 	whURL          = flag.String("webhook.url", os.Getenv("FRESHDESK_API"), "Freshdesk API URL.")
 	freshdeskToken = flag.String("freshdesk.token", os.Getenv("FRESHDESK_TOKEN"), "Freshdesk API Token")
 	listenAddress  = flag.String("listen.address", os.Getenv("LISTEN_ADDRESS"), "Address:Port to listen on.")
+	requesterID    = flag.String("requester.id", os.Getenv("REQUESTER_ID"), "Requester ID for created Tickets")
 )
 
 func checkFdToken(freshdeskToken string) {
@@ -136,9 +138,10 @@ func checkWhURL(whURL string) {
 	}
 }
 
-func getTickets() {
+func getTickets() *freshServiceTicket {
 	client := &http.Client{}
-	url := *whURL
+	url := *whURL + "?requester_id=" + *requesterID
+	fmt.Println(url)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -162,6 +165,8 @@ func getTickets() {
 	if jsonErr != nil {
 		log.Fatal(jsonErr)
 	}
+	fmt.Println(tickets)
+	return &tickets
 
 }
 
