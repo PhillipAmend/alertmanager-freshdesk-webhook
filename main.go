@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -138,10 +139,9 @@ func checkWhURL(whURL string) {
 	}
 }
 
-func getTickets() *freshServiceTicket {
+func getTickets(fingerprint string) (ticketid int, err error) {
 	client := &http.Client{}
 	url := *whURL + "?requester_id=" + *requesterID
-	fmt.Println(url)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -165,9 +165,13 @@ func getTickets() *freshServiceTicket {
 	if jsonErr != nil {
 		log.Fatal(jsonErr)
 	}
-	fmt.Println(tickets)
-	return &tickets
-
+	for _, tickets := range tickets.Tickets {
+		switch tickets.CustomFields.Fingerprint {
+		case fingerprint:
+			return tickets.ID, nil
+		}
+	}
+	return
 }
 
 func sendWebhook(amo *alertManOut) {
@@ -186,7 +190,8 @@ func sendWebhook(amo *alertManOut) {
 		_
 		resolved = iota + 1
 	)
-
+	url := *whURL
+	reqmethod := "POST"
 	groupedAlerts := make(map[string][]alertManAlert)
 	client := &http.Client{}
 	for _, alert := range amo.Alerts {
@@ -224,8 +229,22 @@ func sendWebhook(amo *alertManOut) {
 
 		for _, alert := range alerts {
 			fingerprint := alert.Fingerprint
+			ticketid, err := getTickets(fingerprint)
+			if ticketid != 0 {
+				ticketidstring := strconv.Itoa(ticketid)
+				reqmethod = "PUT"
+				if reqmethod == "PUT" {
+					url = url + "/" + ticketidstring
+				}
+
+			}
+			if err != nil {
+				fmt.Println(err)
+
+			}
 
 			DO.Custom_Fields.Fingerprint = fingerprint
+
 		}
 
 		for _, alert := range alerts {
@@ -242,7 +261,7 @@ func sendWebhook(amo *alertManOut) {
 		DOD, _ := json.Marshal(DO)
 
 		// Create request
-		req, _ := http.NewRequest("POST", *whURL, bytes.NewReader(DOD))
+		req, _ := http.NewRequest(reqmethod, url, bytes.NewReader(DOD))
 		req.Header.Set("Content-Type", "application/json")
 		req.SetBasicAuth(*freshdeskToken, "X")
 		// Fetch Request
@@ -251,7 +270,7 @@ func sendWebhook(amo *alertManOut) {
 		// Read Response Body
 		respBody, _ := ioutil.ReadAll(resp.Body)
 
-		fmt.Println("response Body : ", string(respBody))
+		log.Println("API response : ", string(respBody))
 	}
 }
 
@@ -259,15 +278,13 @@ func main() {
 	flag.Parse()
 	checkWhURL(*whURL)
 	checkFdToken(*freshdeskToken)
-	getTickets()
-
 	if *listenAddress == "" {
 		*listenAddress = defaultListenAddress
 	}
 
 	log.Printf("Listening on: %s", *listenAddress)
 	http.ListenAndServe(*listenAddress, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s - [%s] %s", r.Host, r.Method, r.URL.RawPath)
+		log.Println("Incoming Alert from: ", r.Host, r.Method, r.URL.RawPath)
 
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
