@@ -213,7 +213,7 @@ func sendWebhook(amo *alertManOut) {
 			Description: amo.CommonAnnotations.Summary,
 		}
 		if amo.CommonAnnotations.Summary == "" {
-			DO.Description = amo.CommonLabels.Alertname
+			DO.Description = DO.Subject
 		}
 		if amo.CommonLabels.Severity == "warning" {
 			DO.Priority = warning
