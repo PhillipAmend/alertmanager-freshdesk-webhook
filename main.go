@@ -212,6 +212,9 @@ func sendWebhook(amo *alertManOut) {
 			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
 			Description: amo.CommonAnnotations.Summary,
 		}
+		if amo.CommonAnnotations.Summary == "" {
+			DO.Description = amo.CommonLabels.Alertname
+		}
 		if amo.CommonLabels.Severity == "warning" {
 			DO.Priority = warning
 		} else if amo.CommonLabels.Severity == "critical" {
