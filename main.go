@@ -112,21 +112,21 @@ type freshServiceTicket struct {
 const defaultListenAddress = "127.0.0.1:9095"
 
 var (
-	whURL          = flag.String("webhook.url", os.Getenv("FRESHDESK_API"), "Freshdesk API URL.")
-	freshdeskToken = flag.String("freshdesk.token", os.Getenv("FRESHDESK_TOKEN"), "Freshdesk API Token")
-	listenAddress  = flag.String("listen.address", os.Getenv("LISTEN_ADDRESS"), "Address:Port to listen on.")
-	requesterID    = flag.String("requester.id", os.Getenv("REQUESTER_ID"), "Requester ID for created Tickets")
+	whURL             = flag.String("webhook.url", os.Getenv("FRESHSERVICE_API"), "Freshdesk API URL.")
+	freshserviceToken = flag.String("freshdesk.token", os.Getenv("FRESHSERVICE_TOKEN"), "Freshdesk API Token")
+	listenAddress     = flag.String("listen.address", os.Getenv("LISTEN_ADDRESS"), "Address:Port to listen on.")
+	requesterID       = flag.String("requester.id", os.Getenv("REQUESTER_ID"), "Requester ID for created Tickets")
 )
 
-func checkFdToken(freshdeskToken string) {
-	if freshdeskToken == "" {
-		log.Fatalf("Environment variable 'FRESHDESK_TOKEN' or CLI parameter 'freshdesk.token' not found.")
+func checkFdToken(freshserviceToken string) {
+	if freshserviceToken == "" {
+		log.Fatalf("Environment variable 'FRESHSERVICE_TOKEN' or CLI parameter 'freshdesk.token' not found.")
 	}
 }
 
 func checkWhURL(whURL string) {
 	if whURL == "" {
-		log.Fatalf("Environment variable 'FRESHDESK_API' or CLI parameter 'webhook.url' not found.")
+		log.Fatalf("Environment variable 'FRESHSERVICE_API' or CLI parameter 'webhook.url' not found.")
 	}
 	_, err := url.Parse(whURL)
 	if err != nil {
@@ -148,7 +148,7 @@ func getTickets(fingerprint string) (ticketid int, err error) {
 		log.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(*freshdeskToken, "X")
+	req.SetBasicAuth(*freshserviceToken, "X")
 	res, getErr := client.Do(req)
 	if getErr != nil {
 		log.Fatal(getErr)
@@ -205,7 +205,7 @@ func sendWebhook(amo *alertManOut) {
 			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
 			Description: amo.CommonAnnotations.Summary,
 			Name:        amo.CommonLabels.Alertname,
-			Email:       "phillip@kubermatic.com",
+			Email:       "wacker-alerting@loodse.com",
 		}
 
 		RichEmbed := freshdeskTicket{
@@ -263,7 +263,7 @@ func sendWebhook(amo *alertManOut) {
 		// Create request
 		req, _ := http.NewRequest(reqmethod, url, bytes.NewReader(DOD))
 		req.Header.Set("Content-Type", "application/json")
-		req.SetBasicAuth(*freshdeskToken, "X")
+		req.SetBasicAuth(*freshserviceToken, "X")
 		// Fetch Request
 		resp, _ := client.Do(req)
 		defer resp.Body.Close()
@@ -277,7 +277,7 @@ func sendWebhook(amo *alertManOut) {
 func main() {
 	flag.Parse()
 	checkWhURL(*whURL)
-	checkFdToken(*freshdeskToken)
+	checkFdToken(*freshserviceToken)
 	if *listenAddress == "" {
 		*listenAddress = defaultListenAddress
 	}

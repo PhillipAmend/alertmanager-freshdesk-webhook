@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertman-freshservice
+  labels:
+    app: alertman-freshservice
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: alertman-freshservice
+  template:
+    metadata:
+      labels:
+        app: alertman-freshservice
+    spec:
+      containers:
+      - name: alertman-freshservice
+        image: quay.io/phillipamend/alertman-freshservice
+        tag: latest
+        env:
+        - name: FRESHSERVICE_API
+          value: "https://companyname.freshservice.com/api/v2/tickets"
+        - name: REQUESTER_ID
+          value: "REQUESTERID"
+        - name: FRESHSERVICE_TOKEN
+          value: "FRESHSERVICE_TOKEN_HERE"
+        ports:
+        - containerPort: 9095
