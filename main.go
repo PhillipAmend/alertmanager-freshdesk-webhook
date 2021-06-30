@@ -55,6 +55,7 @@ type freshdeskOut struct {
 	Priority      int    `json:"priority"`
 	Name          string `json:"name"`
 	Email         string `json:"email"`
+	DepartmentID  int    `json:"department_id"`
 	Custom_Fields struct {
 		Fingerprint string `json:"fingerprint"`
 	} `json:"custom_fields"`
@@ -116,6 +117,7 @@ var (
 	freshserviceToken = flag.String("freshdesk.token", os.Getenv("FRESHSERVICE_TOKEN"), "Freshdesk API Token")
 	listenAddress     = flag.String("listen.address", os.Getenv("LISTEN_ADDRESS"), "Address:Port to listen on.")
 	requesterID       = flag.String("requester.id", os.Getenv("REQUESTER_ID"), "Requester ID for created Tickets")
+	companyID         = flag.String("company.id", os.Getenv("COMPANY_ID"), "Company ID for created Tickets")
 )
 
 func checkFdToken(freshserviceToken string) {
@@ -193,6 +195,11 @@ func sendWebhook(amo *alertManOut) {
 	url := *whURL
 	reqmethod := "POST"
 	groupedAlerts := make(map[string][]alertManAlert)
+	department, err := strconv.Atoi(*companyID)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(2)
+	}
 	client := &http.Client{}
 	for _, alert := range amo.Alerts {
 		groupedAlerts[alert.Status] = append(groupedAlerts[alert.Status], alert)
@@ -202,10 +209,11 @@ func sendWebhook(amo *alertManOut) {
 	for status, alerts := range groupedAlerts {
 
 		DO := freshdeskOut{
-			Subject:     fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
-			Description: amo.CommonAnnotations.Summary,
-			Name:        amo.CommonLabels.Alertname,
-			Email:       "wacker-alerting@loodse.com",
+			Subject:      fmt.Sprintf("[%s:%d] %s", strings.ToUpper(status), len(alerts), amo.CommonLabels.Alertname),
+			Description:  amo.CommonAnnotations.Summary,
+			Name:         amo.CommonLabels.Alertname,
+			Email:        "wacker-alerting@loodse.com",
+			DepartmentID: department,
 		}
 
 		RichEmbed := freshdeskTicket{
