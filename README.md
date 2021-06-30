@@ -10,8 +10,6 @@ In order to run the tool you have to export serveral ENV variables.
 Either in you local ENV or in the [deployment.yaml](deployment.yaml)
 
 
-### Support Versions table 
-
 | ENV                   | Required              | Example        | Default       |
 |-----------------------|-----------------------|----------------|---------------|
 | FRESHSERVICE_API      | Yes                   | "https://yourcompany.freshservice.com/api/v2/tickets"         |  -       |
