@@ -7,7 +7,7 @@ Freshalert is a tool for transforming Alertmanager alerts into Freshdesk tickets
 
 ### Enrvionment Variables
 In order to run the tool you have to export serveral ENV variables.
-Either in you local ENV or in the [deployment.yaml](deployment.yaml)
+Either in you local ENV or in the [deployment.yaml](./examples/k8s/deployment.yaml)
 
 
 | ENV                   | Required              | Example        | Default       |
@@ -17,12 +17,7 @@ Either in you local ENV or in the [deployment.yaml](deployment.yaml)
 | FRESHSERVICE_TOKEN    | Yes                   | 7ZbssdNvsfpadummUvpchPK        |  -       |
 | LISTEN_ADDRESS        | No                    | 9095           |  9095       |
 
-- FRESHSERVICE_API (Required) - The API url pointing to you Freshservice Account
-  - Eg.: "https://yourcompany.freshservice.com/api/v2/tickets"
-- REQUESTER_ID (Required) - The Freshservice requester id 
-  - Eg.: ""
-- FRESHSERVICE_TOKEN (Required) -  Yor Freshservice API Token
-- LISTEN_ADDRESS - Port to listen on. **Default 9095**
+
 
 ### Alertmanager Config
 You have to create a Webhook receiver configuration in your alertmanager.yaml
