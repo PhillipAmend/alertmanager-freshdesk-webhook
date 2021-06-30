@@ -17,13 +17,25 @@ spec:
       containers:
       - name: alertman-freshservice
         image: quay.io/phillipamend/alertman-freshservice
-        tag: latest
+        imagePullPolicy: Always
         env:
         - name: FRESHSERVICE_API
-          value: "https://companyname.freshservice.com/api/v2/tickets"
+          value: "https://youcompany.freshservice.com/api/v2/tickets"
         - name: REQUESTER_ID
           value: "REQUESTERID"
         - name: FRESHSERVICE_TOKEN
-          value: "FRESHSERVICE_TOKEN_HERE"
+          value: "TOKEN"
         ports:
         - containerPort: 9095
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertman-freshservice-service
+spec:
+  selector:
+    app: alertman-freshservice
+  ports:
+    - protocol: TCP
+      port: 9095
+      targetPort: 9095
